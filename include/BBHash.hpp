@@ -17,9 +17,10 @@ class bb_hash {
 public:
     bb_hash(uint64_t n, double g, uint64_t max_reg = MAX_REG_HASH_DEF) : size(n), gamma(g), max_regular_hash_count(max_reg) { }
     bb_hash(std::vector<key_type>* keys, uint64_t n, double g, uint64_t max_reg = MAX_REG_HASH_DEF);
+    uint64_t query(key_type key);
 private:
-    std::vector<bit_vector*> A;
-    std::vector<bit_vector*> C;
+    std::vector<rank_support*> A;
+    std::vector<uint64_t> hash_mods;
     uint64_t size;
     double gamma;
     uint64_t max_regular_hash_count;
