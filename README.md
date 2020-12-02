@@ -4,8 +4,8 @@ This project implements a minimal perfect hash function using the BBHash method 
 
 ## Instructions to install the project
 ```
-> git clone https://github.com/mohsenzakeri/FM-Index.git
-> cd FM-Index
+> git clone https://github.com/mohsenzakeri/BBHash.git
+> cd BBHash
 > mkdir build
 > cd build
 > cmake ../
