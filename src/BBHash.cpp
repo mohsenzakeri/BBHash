@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <limits>
 
 #include "BBHash.hpp"
 #include "xxhash.h"
@@ -33,8 +34,15 @@ bb_hash<key_type>::bb_hash(std::vector<key_type>* keys, uint64_t n, double g, ui
 	for (uint64_t i = 0; i < size; i++) {
 	    if (all_keys.read_bit(i) == 1) continue;
 
-            XXH64_hash_t hash = XXH64(static_cast<void*>(&((*keys)[i])), sizeof((*keys)[i]), seed);
+	    XXH64_hash_t hash;
+	    auto xx = (*keys)[i];
+	    if (typeid(xx) == typeid(std::string)) {
+    	        hash = XXH64(reinterpret_cast<void*>(const_cast<char*>(xx.data())), xx.length(), seed);
+            } else {
+                hash = XXH64(static_cast<void*>(&xx), sizeof(xx), seed);
+	    }
 	    uint64_t hash_value = hash % (static_cast<uint64_t>(left_keys_count * gamma));
+	    if (i==100) std::cerr<<xx << " " << xx.length() << " " <<hash << " " << hash_value <<  " " << seed << " --- \n";
 	    if (hash_value > A_bit_vec->get_length()) std::cerr<< "Warning!\n";
 	    if (hash_value > C_bit_vec->get_length()) std::cerr<< "Warning!\n";
 	    if (A_bit_vec->read_bit(hash_value) == 0 and C_bit_vec->read_bit(hash_value) == 0) {
@@ -52,7 +60,13 @@ bb_hash<key_type>::bb_hash(std::vector<key_type>* keys, uint64_t n, double g, ui
 	for (uint64_t i = 0; i < size; i++) {
 	    if (all_keys.read_bit(i) == 1) continue;
 
-            XXH64_hash_t hash = XXH64(static_cast<void*>(&((*keys)[i])), sizeof((*keys)[i]), seed);
+	    auto xx = (*keys)[i];
+	    XXH64_hash_t hash;
+	    if (typeid(xx) == typeid(std::string)) {
+    	        hash = XXH64(reinterpret_cast<void*>(const_cast<char*>(xx.data())), xx.length(), seed);
+	    } else {
+                hash = XXH64(static_cast<void*>(&xx), sizeof(xx), seed);
+	    }
 	    uint64_t hash_value = hash % (static_cast<uint64_t>(hash_mods.back() * gamma));
 	    if (A_bit_vec->read_bit(hash_value) == 1) {
 		all_keys.set_index(i);
@@ -69,11 +83,20 @@ template <typename key_type>
 uint64_t bb_hash<key_type>::query(key_type key) {
     uint64_t res = 0;
     for (size_t i = 0; i < A.size(); i++) {
-        XXH64_hash_t hash = XXH64(static_cast<void*>(&key), sizeof(key), i);
-	uint64_t hash_value = hash % (static_cast<uint64_t>(hash_mods.back() * gamma));
+        XXH64_hash_t hash;
+        if (typeid(key) == typeid(std::string)) {
+            hash = XXH64(reinterpret_cast<void*>(const_cast<char*>(key.data())), key.length(), i);
+        } else {
+            hash = XXH64(static_cast<void*>(&key), sizeof(key), i);
+	}
+	uint64_t hash_value = hash % (static_cast<uint64_t>(hash_mods[i] * gamma));
         if (A[i]->get_bit_vec()->read_bit(hash_value) == 1) {
 	    return res + A[i]->rank1(hash_value);
 	}
-	
+        res += A[i]->rank1(static_cast<uint64_t>(hash_mods.back() * gamma) - 1);
     }
+    if (reg_hash.find(key) != reg_hash.end())
+        return res + reg_hash[key];
+    else
+	return std::numeric_limits<uint64_t>::max();
 }

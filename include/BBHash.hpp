@@ -4,10 +4,7 @@
 #include <vector>
 #include <unordered_map>
 
-#include "xxhash.h"
-
 #include "RankSupport.hpp"
-#include "SelectSupport.hpp"
 #include "BitVector.hpp"
 
 #define MAX_REG_HASH_DEF 10000
@@ -27,6 +24,5 @@ private:
     std::unordered_map<key_type, uint64_t> reg_hash;
 };
 
-template class bb_hash<uint64_t>;
 template class bb_hash<std::string>;
 #endif
