@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <limits>
+#include <sys/stat.h> 
 
 #include "BBHash.hpp"
 #include "xxhash.h"
@@ -42,7 +43,6 @@ bb_hash<key_type>::bb_hash(std::vector<key_type>* keys, uint64_t n, double g, ui
                 hash = XXH64(static_cast<void*>(&xx), sizeof(xx), seed);
 	    }
 	    uint64_t hash_value = hash % (static_cast<uint64_t>(left_keys_count * gamma));
-	    if (i==100) std::cerr<<xx << " " << xx.length() << " " <<hash << " " << hash_value <<  " " << seed << " --- \n";
 	    if (hash_value > A_bit_vec->get_length()) std::cerr<< "Warning!\n";
 	    if (hash_value > C_bit_vec->get_length()) std::cerr<< "Warning!\n";
 	    if (A_bit_vec->read_bit(hash_value) == 0 and C_bit_vec->read_bit(hash_value) == 0) {
@@ -73,7 +73,7 @@ bb_hash<key_type>::bb_hash(std::vector<key_type>* keys, uint64_t n, double g, ui
 		left_keys_count -= 1;
 	    }
 	}
-	std::cerr<<seed << " " << left_keys_count<< "  " << all_keys.num_ones() << "\n";
+	//std::cerr<<seed << " " << left_keys_count<< "  " << all_keys.num_ones() << "\n";
         
 	seed++;
     }
@@ -99,4 +99,83 @@ uint64_t bb_hash<key_type>::query(key_type key) {
         return res + reg_hash[key];
     else
 	return std::numeric_limits<uint64_t>::max();
+}
+
+template <typename key_type>
+void bb_hash<key_type>::save(char* output_dir) {
+    mkdir(output_dir,0777);
+    uint64_t index = 0;
+    for (auto& a : A) {
+	std::string file_name = static_cast<std::string>(output_dir) + "/" + std::to_string(index) + ".rank";
+        a->save(file_name);
+	index += 1;
+    }
+    std::cerr<<"A vectors are stored.\n";
+    std::string fname = static_cast<std::string>(output_dir) + "/bbhash.bin";
+    std::ofstream fout(fname, std::ios::out | std::ios::binary);
+    fout.write((char*) &size, sizeof(size));
+    fout.write((char*) &gamma, sizeof(gamma));
+    fout.write((char*) &max_regular_hash_count, sizeof(max_regular_hash_count));
+    uint64_t num_bit_vecs = hash_mods.size();
+    fout.write((char*) &num_bit_vecs, sizeof(num_bit_vecs));
+    for (uint64_t i = 0; i < hash_mods.size(); i++) {
+        uint64_t curr_mod = hash_mods[i];
+        fout.write((char*) &curr_mod, sizeof(curr_mod));
+    }
+    uint64_t reg_hash_size = reg_hash.size();
+    fout.write((char*) &reg_hash_size, sizeof(reg_hash_size));
+    for (auto& kv : reg_hash) {
+	key_type key = kv.first;
+	uint64_t val = kv.second;
+        size_t keylen = key.size();
+        fout.write((char*) &keylen, sizeof(keylen));
+        fout.write(key.c_str(), keylen); 
+        fout.write((char*) &val, sizeof(val));
+    }
+    std::cerr<<"Rest of the hash function files are stored.\nIndex saved in "<<output_dir<<"\n";
+    fout.close();
+}
+
+
+
+template <typename key_type>
+void bb_hash<key_type>::load(char* index_dir) {
+    std::string fname = static_cast<std::string>(index_dir) + "/bbhash.bin";
+    std::ifstream fin(fname, std::ios::in | std::ios::binary);
+    fin.read((char*) &size, sizeof(size));
+    fin.read((char*) &gamma, sizeof(gamma));
+    fin.read((char*) &max_regular_hash_count, sizeof(max_regular_hash_count));
+    uint64_t hash_count = 0;
+    fin.read((char*) &hash_count, sizeof(hash_count));
+    uint64_t curr_mod = 0;
+    std::cerr<<"here " << hash_count << "\n";
+    for (uint64_t i = 0; i < hash_count; i++) {
+        fin.read((char*) &curr_mod, sizeof(curr_mod));
+	hash_mods.push_back(curr_mod);
+    }
+    uint64_t reg_hash_size = 0;
+    fin.read((char*) &reg_hash_size, sizeof(reg_hash_size));
+    std::cerr<<"here " << reg_hash_size << "\n";
+    for (uint64_t i = 0; i < reg_hash_size; i++) {
+	std::string key;
+        uint64_t val;
+	size_t keylen = 0;
+	fin.read((char*) &keylen, sizeof(keylen));
+	char* key_char = new char[keylen + 1];
+	fin.read(key_char, keylen);
+	key_char[keylen] = '\0';
+	key = key_char;
+        fin.read((char*) &val, sizeof(val));
+	reg_hash[key] = val;
+    }
+    fin.close();
+
+    std::cerr<< "the index is being loaded.\n";
+    for (uint32_t i = 0; i < hash_count; i++) {
+	std::string file_name = static_cast<std::string>(index_dir) + "/" + std::to_string(i) + ".rank";
+        rank_support* new_rank = new rank_support();
+	new_rank->load(file_name);
+	A.push_back(new_rank);
+    }
+    std::cerr<<"All the bitvectors are loaded.\nIndex loaded successfully!\n";
 }

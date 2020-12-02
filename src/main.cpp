@@ -23,4 +23,13 @@ int main() {
         if (h.query(lookup[i]) > count)
             std::cerr<<h.query(lookup[i]) << " Error!\n";
     }
+    h.save("BBB");
+
+
+    bb_hash<std::string> new_h;
+    new_h.load("BBB");
+    for (uint64_t i = 0; i < count; i++) {
+        if (new_h.query(lookup[i]) > count)
+            std::cerr<<new_h.query(lookup[i]) << " Error!\n";
+    }
 }
