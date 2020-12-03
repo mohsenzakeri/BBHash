@@ -3,7 +3,6 @@
 
 #include "BitVector.hpp"
 #include "RankSupport.hpp"
-#include "SelectSupport.hpp"
 
 bit_vector::bit_vector(uint64_t l) : length(l), bsize(1) {
     uint64_t arr_length = static_cast<uint64_t>(length/64) + 1;
