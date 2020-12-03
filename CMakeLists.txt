@@ -10,10 +10,8 @@ target_include_directories(bbhash PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/../include
 
 #add_executable(main src/main.cpp)
 add_executable(main src/main.cpp)
-
-#include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../include/libdivsufsort"
-#                    "${CMAKE_CURRENT_BINARY_DIR}/../include/libdivsufsort")
-#link_directories("${CMAKE_CURRENT_BINARY_DIR}/../include/libdivsufsortlib")
+add_executable(benchmark src/benchmark.cpp)
 
 # Link the executable and the library together
 target_link_libraries(main bbhash)
+target_link_libraries(benchmark bbhash)

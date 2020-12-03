@@ -104,6 +104,14 @@ uint64_t bb_hash<key_type>::query(key_type key) {
 }
 
 template <typename key_type>
+uint64_t bb_hash<key_type>::num_bits() {
+    uint64_t res = 0;
+    for (auto a : A)
+        res += a->get_bit_vec()->get_length();
+    return res;
+}
+
+template <typename key_type>
 void bb_hash<key_type>::save(char* output_dir) {
     mkdir(output_dir,0777);
     uint64_t index = 0;

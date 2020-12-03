@@ -17,6 +17,8 @@ public:
 	    size(n), gamma(g), bit_vec_count(b) { }
     bb_hash(std::vector<key_type>* keys, uint64_t n, double g, size_t b = BIT_VEC_LEVEL_DEF);
     uint64_t query(key_type key);
+    uint64_t num_bits();
+    uint64_t reg_hash_count() { return reg_hash.size(); }
     void save(char* output_dir);
     void load(char* index_dir);
 private:
