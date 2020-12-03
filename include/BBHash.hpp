@@ -7,14 +7,15 @@
 #include "RankSupport.hpp"
 #include "BitVector.hpp"
 
-#define MAX_REG_HASH_DEF 10000
+#define BIT_VEC_LEVEL_DEF 3
 
 template<typename key_type>
 class bb_hash {
 public:
     bb_hash() { }
-    bb_hash(uint64_t n, double g, uint64_t max_reg = MAX_REG_HASH_DEF) : size(n), gamma(g), max_regular_hash_count(max_reg) { }
-    bb_hash(std::vector<key_type>* keys, uint64_t n, double g, uint64_t max_reg = MAX_REG_HASH_DEF);
+    bb_hash(uint64_t n, double g, size_t b = BIT_VEC_LEVEL_DEF) :
+	    size(n), gamma(g), bit_vec_count(b) { }
+    bb_hash(std::vector<key_type>* keys, uint64_t n, double g, size_t b = BIT_VEC_LEVEL_DEF);
     uint64_t query(key_type key);
     void save(char* output_dir);
     void load(char* index_dir);
@@ -23,7 +24,7 @@ private:
     std::vector<uint64_t> hash_mods;
     uint64_t size;
     double gamma;
-    uint64_t max_regular_hash_count;
+    size_t bit_vec_count;
     std::unordered_map<key_type, uint64_t> reg_hash;
 };
 

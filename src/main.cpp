@@ -15,7 +15,7 @@ int main() {
     for (uint64_t i = 0; i < count; i++) {
     	str_keys.push_back(std::to_string(i));
     }
-    bb_hash<std::string> str_hash(&str_keys, count, 1.0, 10000);
+    bb_hash<std::string> str_hash(&str_keys, count, 1.0);
 
     auto lookup = str_keys;
     auto h = str_hash;

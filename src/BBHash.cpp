@@ -7,28 +7,19 @@
 #include "xxhash.h"
 
 template <typename key_type>
-bb_hash<key_type>::bb_hash(std::vector<key_type>* keys, uint64_t n, double g, uint64_t max_reg) : size(n), gamma(g) {
+bb_hash<key_type>::bb_hash(std::vector<key_type>* keys, uint64_t n, double g, uint64_t b) : size(n), gamma(g), bit_vec_count(b) {
     if (keys->size() != size) {
         std::cerr<<"number of keys is different from the size\n";
 	return;
     }
 
-    max_regular_hash_count = max_reg;
     bit_vector all_keys(size);  
     uint64_t keys_hashed_count = 0;
     uint64_t left_keys_count = size;
     uint64_t seed = 0;
-    while (left_keys_count > 0) {
-	if (left_keys_count < max_regular_hash_count) {
-	    uint64_t count = 0;
-            for (uint64_t i = 0; i < size; i++) {
-                if (all_keys.read_bit(i)) continue;
-		reg_hash[(*keys)[i]] = count;
-		count += 1;
-	    }
-	    break;
-	}
+    for(size_t j = 0; j < bit_vec_count and left_keys_count > 0; j++) {
 	hash_mods.push_back(left_keys_count);
+
         bit_vector* A_bit_vec = new bit_vector(static_cast<uint64_t>(hash_mods.back() * gamma));
         bit_vector* C_bit_vec = new bit_vector(static_cast<uint64_t>(hash_mods.back() * gamma));
 
@@ -43,8 +34,10 @@ bb_hash<key_type>::bb_hash(std::vector<key_type>* keys, uint64_t n, double g, ui
                 hash = XXH64(static_cast<void*>(&xx), sizeof(xx), seed);
 	    }
 	    uint64_t hash_value = hash % (static_cast<uint64_t>(left_keys_count * gamma));
+
 	    if (hash_value > A_bit_vec->get_length()) std::cerr<< "Warning!\n";
 	    if (hash_value > C_bit_vec->get_length()) std::cerr<< "Warning!\n";
+
 	    if (A_bit_vec->read_bit(hash_value) == 0 and C_bit_vec->read_bit(hash_value) == 0) {
 		A_bit_vec->set_index(hash_value);
 	    } else if (A_bit_vec->read_bit(hash_value) == 1 and C_bit_vec->read_bit(hash_value) == 0) {
@@ -76,6 +69,15 @@ bb_hash<key_type>::bb_hash(std::vector<key_type>* keys, uint64_t n, double g, ui
 	//std::cerr<<seed << " " << left_keys_count<< "  " << all_keys.num_ones() << "\n";
         
 	seed++;
+    }
+
+    if (left_keys_count > 0) {
+        uint64_t count = 0;
+        for (uint64_t i = 0; i < size; i++) {
+           if (all_keys.read_bit(i)) continue;
+           reg_hash[(*keys)[i]] = count;
+      	   count += 1;
+        }
     }
 }
 
@@ -115,7 +117,7 @@ void bb_hash<key_type>::save(char* output_dir) {
     std::ofstream fout(fname, std::ios::out | std::ios::binary);
     fout.write((char*) &size, sizeof(size));
     fout.write((char*) &gamma, sizeof(gamma));
-    fout.write((char*) &max_regular_hash_count, sizeof(max_regular_hash_count));
+    fout.write((char*) &bit_vec_count, sizeof(bit_vec_count));
     uint64_t num_bit_vecs = hash_mods.size();
     fout.write((char*) &num_bit_vecs, sizeof(num_bit_vecs));
     for (uint64_t i = 0; i < hash_mods.size(); i++) {
@@ -144,7 +146,7 @@ void bb_hash<key_type>::load(char* index_dir) {
     std::ifstream fin(fname, std::ios::in | std::ios::binary);
     fin.read((char*) &size, sizeof(size));
     fin.read((char*) &gamma, sizeof(gamma));
-    fin.read((char*) &max_regular_hash_count, sizeof(max_regular_hash_count));
+    fin.read((char*) &bit_vec_count, sizeof(bit_vec_count));
     uint64_t hash_count = 0;
     fin.read((char*) &hash_count, sizeof(hash_count));
     uint64_t curr_mod = 0;
